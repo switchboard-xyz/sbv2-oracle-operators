@@ -1,0 +1,15 @@
+googlePayerSecretPath: "projects/157108942017/secrets/oracle-payer-secret/versions/latest"
+googleOracleSecretPath: "projects/157108942017/secrets/oracle-payer-secret/versions/latest"
+solanaMainnetRpc: ""
+networkId: "testnet"
+heartbeatInterval: 15
+gcpConfigBucket: "oracle-configs:configs.json"
+rpcUrl: ""
+# pagerdutyEventKey: "faafe60385384309c077ed61303e50d0"
+payerSecret: "" #should remain null unless you want to actually use this keypair provisioning strategy
+payerSecretName: "oracle-payer-secret"
+image: ""
+tpsParallelTries: "1"
+# oracleKeys:
+#   - name: idx-1
+#     data: ""

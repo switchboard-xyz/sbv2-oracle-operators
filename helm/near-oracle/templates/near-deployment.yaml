@@ -1,0 +1,123 @@
+{{- $values := .Values -}}
+{{- range $index, $key := .Values.oracleKeys }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    chain: near
+    app: oracle
+    should_scrape: scrape
+    queue: {{ $key.queue }}
+  name: near-{{ $key.queue }}-oracle-{{ $key.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oracle
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        chain: near
+        app: oracle
+        queue: {{ $key.queue }}
+        should_scrape: scrape
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - oracle
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - env:
+      # NEAR CONFIG
+        - 
+          name: CHAIN
+          value: "near"
+        - 
+          name: NEAR_RPC_URL
+          value: {{ $values.rpcUrl }}
+        - 
+          name: NEAR_NETWORK_ID
+          value: {{ $values.networkId }}
+
+      # ORACLE CONFIG
+        - 
+          name: NEAR_ORACLE_KEY
+          value: {{ $key.data }}
+        - 
+          name: HEARTBEAT_INTERVAL
+          value: {{ $values.heartbeatInterval | quote}}
+      # SECRETS
+        - 
+          name: NEAR_NAMED_ACCOUNT
+          value: {{ $values.namedAccount }}
+        - 
+          name: GOOGLE_PAYER_SECRET_PATH
+          value: {{ $values.googlePayerSecretPath }}
+        - 
+          name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/secrets/google/key.json
+      # TASK RUNNER CONFIG
+        - 
+          name: TASK_RUNNER_SOLANA_RPC
+          value: {{ $values.solanaMainnetRpc }}
+        - 
+          name: GCP_CONFIG_BUCKET
+          value: {{ $values.gcpConfigBucket }}
+
+      # MONITORING CONFIG
+        - 
+          name: METRICS_EXPORTER
+          value: {{ $values.metricsExporter }}
+        # - 
+        #   name: PAGERDUTY_EVENT_KEY
+        #   value: {{ $values.pagerdutyEventKey }}
+
+      # AWS Credentials
+        - 
+          name: AWS_ACCESS_KEY_ID
+          value: AKIAZU7UBDZ6NVYUP7ER
+        - 
+          name: AWS_SECRET_ACCESS_KEY
+          value: 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
+
+      # IMAGE / RESOURCES
+        image: {{ $values.image }}
+        imagePullPolicy: Always
+        name: near-oracle
+        ports:
+        - name: web
+          containerPort: 9090
+          protocol: TCP
+        # livenessProbe:
+          # httpGet:
+            # path: /healthz
+            # port: 8080
+          # initialDelaySeconds: 30
+          # periodSeconds: 3
+        resources:
+          limits:
+            cpu: 2048m
+            memory: 2048Mi
+          requests:
+            cpu: 2048m
+            memory: 2048Mi
+        volumeMounts:
+        - mountPath: /var/secrets/google
+          name: google-cloud-key
+      volumes:
+      - name: google-cloud-key
+        secret:
+          secretName: oracle-service-account
+---
+{{ end }}
+
