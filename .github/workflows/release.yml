@@ -1,0 +1,85 @@
+name: Create Release Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      docker-tag:
+        description:
+          the newly created docker image to create a release candidate for
+        required: true
+  repository_dispatch:
+    types: [create_release]
+    inputs:
+      docker-tag:
+        description:
+          the newly created docker image to create a release candidate for
+        required: true
+
+jobs:
+  release:
+    name: Create Release Candidate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: 🔍 Docker Tag
+        shell: bash
+        run: |
+          if [[ ${{ github.event_name == 'repository_dispatch' }} ]]; then
+            echo "DOCKER_TAG=${{ github.event.client_payload.docker-tag }}" >> $GITHUB_ENV;
+          elif [[ ${{ github.event_name == 'workflow_dispatch' }} ]]; then
+            echo "DOCKER_TAG=${{ github.event.inputs.docker-tag }}" >> $GITHUB_ENV;
+          else 
+            echo "Workflow was not triggered with repository_dispatch or workflow_dispatch"
+            exit 1
+          fi
+
+      # TODO: Start new container and copy the sbv2-oracle files
+      - name: Copy Docker container build files
+        shell: bash
+        run: |
+          mkdir -p docker-sbv2-oracle
+          docker image pull switchboardlabs/node:${{ env.DOCKER_TAG }}
+          docker run -d --name sbv2-oracle switchboardlabs/node:${{ env.DOCKER_TAG }}
+          docker cp sbv2-oracle:/home/node/sbv2-oracle/dist docker-sbv2-oracle
+          docker stop sbv2-oracle
+      - name: Create sbv2-oracle zip
+        shell: bash
+        id: create-zip
+        run: |
+          (cd docker-sbv2-oracle/dist && zip -r "$OLDPWD/sbv2-oracle.zip" .)
+          echo "sbv2_oracle_path=./sbv2-oracle.zip" >> $GITHUB_OUTPUT
+
+      - name: GitHub Release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: oracle/${{ env.DOCKER_TAG }}
+          release_name: Sbv2 Oracle ${{ env.DOCKER_TAG }}
+          draft: false
+          prerelease: false
+          body:
+            "**Switchboard V2 Oracle**\n\nView the ${{
+            github.event.client_payload.docker-tag }} docker tag on
+            [DockerHub](https://hub.docker.com/r/switchboardlabs/node/tags)"
+
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ${{ steps.create-zip.outputs.sbv2_oracle_path }}
+          asset_name: sbv2-oracle.zip
+          asset_content_type: application/tgz
+
+      - name: Rollback Release
+        if: failure() && steps.create-release.outputs.id != ''
+        uses: author/action-rollback@stable
+        with:
+          release_id: ${{ steps.create-release.outputs.id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

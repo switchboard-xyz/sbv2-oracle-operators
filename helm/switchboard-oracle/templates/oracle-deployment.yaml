@@ -1,0 +1,183 @@
+{{- $values := .Values -}}
+{{- range $index, $key := .Values.oracleKeys }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: oracle
+    should_scrape: scrape
+    queue: {{ $key.queue }}
+  name: {{ $key.queue }}-oracle-{{ $key.name }}
+  #namespace: {{ $key.queue }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oracle
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: oracle
+        queue: {{ $key.queue }}
+        should_scrape: scrape
+        queue: {{ $key.queue }}
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - oracle
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - env:
+        - 
+          name: CHAIN
+          value: {{ $values.chain }}
+        - 
+          name: NETWORK_ID
+          value: {{ $values.networkId }}
+        - 
+          name: PROGRAM_ID
+          value: {{ $values.pid }}
+        - 
+          name: HEARTBEAT_INTERVAL
+          value: {{ if $key.heartbeatInterval }}{{ $key.heartbeatInterval | quote }}{{ else }}{{ $values.heartbeatInterval | default "30" | quote }}{{ end }}
+        - 
+          name: ORACLE_KEY
+          value: {{ $key.data }}
+        - 
+          name: RPC_URL
+          value: {{ if $key.rpcUrl }}{{ $key.rpcUrl }}{{ else }}{{ $values.rpcUrl }}{{ end }}
+        -
+          name: BACKUP_RPC_URL_1
+          value: {{ if $key.backupRpc1 }}{{ $key.backupRpc1 }}{{ else }}{{ $values.backupRpc1  }}{{ end }}
+        -
+          name: BACKUP_RPC_URL_2
+          value: {{ if $key.backupRpc2 }}{{ $key.backupRpc2 }}{{ else }}{{ $values.backupRpc2  }}{{ end }}
+        # TASK RUNNER CONFIG
+        - 
+          name: TASK_RUNNER_SOLANA_RPC
+          value: {{ $values.solanaMainnetRpc }}
+        - 
+          name: GCP_CONFIG_BUCKET
+          value: {{ $values.gcpConfigBucket }}
+        # APTOS
+        # NEAR
+        - 
+          name: NEAR_NAMED_ACCOUNT
+          value: {{ $values.namedAccount }}
+        - 
+          name: NEAR_NO_LOGS
+          value: "1"
+        -  # Disable using the built-in near event listener for mainnet and use AWS
+          name: NEAR_LAKE_LISTENER
+          value: {{ if $key.nearLakeListener }}{{ $key.nearLakeListener | quote }}{{ else }}{{ $values.nearLakeListener | default "0" | quote }}{{ end }}
+        # SOLANA
+        -
+          name: SOLANA_DISABLE_REST_CONNECTION
+          value: {{ if $key.disableRestConnection }}{{ $key.disableRestConnection | quote }}{{ else }}{{ $values.disableRestConnection | default "0" | quote  }}{{ end }}
+        -
+          name: SOLANA_SAVE_RESULT_COMPUTE_UNITS
+          value: {{ if $key.saveResultComputeUnits }}{{ $key.saveResultComputeUnits | quote }}{{ else }}{{ $values.saveResultComputeUnits | quote  }}{{ end }}  
+        - 
+          name: SOLANA_COMPUTE_UNIT_PRICE
+          value: {{ $values.computeUnitPrice | default "1" | quote }}
+        - 
+          name: NONCE_QUEUE_SIZE
+          value: {{ if $key.nonceQueueSize }}{{ $key.nonceQueueSize | quote }}{{ else }}{{ $values.nonceQueueSize | default "1000" | quote }}{{ end }}
+        -  # Auto reconnect event watcher after 1hr
+          name: SOLANA_EVENT_WATCHER_AUTORECONNECT
+          value: {{ if $key.autoreconnectEvents }}{{ $key.autoreconnectEvents | quote }}{{ else }}{{ $values.autoreconnectEvents | default "0" | quote }}{{ end }}
+        - 
+          name: SOLANA_BLOCKHASH_REFRESH_RATE
+          value: {{ if $key.blockhashRefreshRate }}{{ $key.blockhashRefreshRate | quote }}{{ else }}{{ $values.blockhashRefreshRate | quote  }}{{ end }}
+        # STARKNET
+        - 
+          name: STARKNET_PAYER_ADDRESS
+          value: {{ if $key.starknetPayerAddress }}{{ $key.starknetPayerAddress }}{{ else }}{{ $values.starknetPayerAddress }}{{ end }}
+        # PERFORMANCE
+        - 
+          name: EVENT_LOOP_STALL_INTERVAL_ERROR
+          value: {{ if $key.eventLoopStallThreshold }}{{ $key.eventLoopStallThreshold | quote }}{{ else }}{{ $values.eventLoopStallThreshold | quote }}{{ end }}
+        - 
+          name: LAST_EVENT_STALENESS_THRESHOLD
+          value: {{ if $key.lastEventStalenessThreshold }}{{ $key.lastEventStalenessThreshold | quote }}{{ else }}{{ $values.lastEventStalenessThreshold | quote }}{{ end }}
+        - 
+          name: LAST_RESPONSE_STALENESS_THRESHOLD
+          value: {{ if $key.lastResponseStalenessThreshold }}{{ $key.lastResponseStalenessThreshold | quote }}{{ else }}{{ $values.lastResponseStalenessThreshold | quote }}{{ end }}
+        # METRICS
+        - 
+          name: METRICS_EXPORTER
+          value: {{ $values.metricsExporter }}
+        # ALERTING
+        - 
+          name: VERBOSE
+          value: {{ if $key.verbose }}{{ $key.verbose | quote }}{{ else }}{{ $values.verbose | default "0" | quote }}{{ end }}
+        - 
+          name: DEBUG
+          value: {{ if $key.debug }}{{ $key.debug | quote }}{{ else }} {{ $values.debug | default "0" | quote }}{{ end }}
+        -
+          name: PAGERDUTY_EVENT_KEY
+          value: {{ if $key.pagerdutyEventKey }}{{ $key.pagerdutyEventKey }}{{ else }}{{ $values.pagerdutyEventKey }}{{ end }}
+        # SECRETS
+        - 
+          name: GOOGLE_PAYER_SECRET_PATH
+          value: {{ if $key.googlePayerSecretPath }}{{ $key.googlePayerSecretPath }}{{ else }}{{ $values.googlePayerSecretPath }}{{ end }}
+        # NEAR only
+        - 
+          name: AWS_ACCESS_KEY_ID
+          value: {{ $values.awsAccessKeyId }}
+        - 
+          name: AWS_SECRET_ACCESS_KEY
+          value: {{ $values.awsSecretAccessKey }}
+
+        image: {{ $values.image }}
+        imagePullPolicy: Always
+        name: oracle
+        command: ["/bin/sh","-c"]
+        args: ["while true; do node --enable-source-maps sbv2-oracle; done"]
+        ports:
+        - name: web
+          containerPort: 9090
+          protocol: TCP
+        - name: liveness-port
+          containerPort: 8080
+          protocol: TCP
+        # wait up to 2 minutes for the container to initialize
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: liveness-port
+          failureThreshold: 15
+          periodSeconds: 8
+        # ping the /healthz check every 30sec
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: liveness-port
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        resources:
+          limits:
+            cpu: 1500m
+            memory: 4092Mi
+          requests:
+            cpu: 1500m
+            memory: 4092Mi
+        volumeMounts:
+        - mountPath: /var/secrets/google
+          name: google-cloud-key
+      volumes:
+      - name: google-cloud-key
+        secret:
+          secretName: oracle-service-account
+---
+{{ end }}
