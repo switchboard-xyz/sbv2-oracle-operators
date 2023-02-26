@@ -84,43 +84,43 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Delete Testnet Release
-        if: startsWith(${{ env.DOCKER_TAG }}, 'testnet-')
-        shell: bash
-        run: |
-          curl -H "Accept: application/json" -H "Authorization: token ${{ env.GH_TOKEN }}" --request DELETE https://api.github.com/repos/switchboard-xyz/sbv2-oracle-operators/releases
+      # - name: Delete Testnet Release
+      #   if: startsWith(${{ env.DOCKER_TAG }}, 'testnet-')
+      #   shell: bash
+      #   run: |
+      #     curl -H "Accept: application/json" -H "Authorization: token ${{ env.GH_TOKEN }}" --request DELETE https://api.github.com/repos/switchboard-xyz/sbv2-oracle-operators/releases
 
-      - name: Create Testnet Release
-        if: startsWith(${{ env.DOCKER_TAG }}, 'testnet-')
-        id: create-testnet-release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: oracle/testnet
-          release_name: Sbv2 Oracle Testnet
-          draft: false
-          prerelease: false
-          body:
-            "**Switchboard V2 Oracle**\n\nView the ${{ env.DOCKER_TAG }} docker
-            tag on
-            [DockerHub](https://hub.docker.com/r/switchboardlabs/node/tags)"
+      # - name: Create Testnet Release
+      #   if: startsWith(${{ env.DOCKER_TAG }}, 'testnet-')
+      #   id: create-testnet-release
+      #   uses: actions/create-release@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     tag_name: oracle/testnet
+      #     release_name: Sbv2 Oracle Testnet
+      #     draft: false
+      #     prerelease: false
+      #     body:
+      #       "**Switchboard V2 Oracle**\n\nView the ${{ env.DOCKER_TAG }} docker
+      #       tag on
+      #       [DockerHub](https://hub.docker.com/r/switchboardlabs/node/tags)"
 
-      - name: Upload Release Assets
-        if: startsWith(${{ env.DOCKER_TAG }}, 'testnet-')
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-testnet-release.outputs.upload_url }}
-          asset_path: ${{ steps.create-zip.outputs.sbv2_oracle_path }}
-          asset_name: sbv2-oracle.zip
-          asset_content_type: application/tgz
+      # - name: Upload Release Assets
+      #   if: startsWith(${{ env.DOCKER_TAG }}, 'testnet-')
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create-testnet-release.outputs.upload_url }}
+      #     asset_path: ${{ steps.create-zip.outputs.sbv2_oracle_path }}
+      #     asset_name: sbv2-oracle.zip
+      #     asset_content_type: application/tgz
 
-      - name: Rollback Release
-        if: failure() && steps.create-testnet-release.outputs.id != ''
-        uses: author/action-rollback@stable
-        with:
-          release_id: ${{ steps.create-release.outputs.id }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Rollback Release
+      #   if: failure() && steps.create-testnet-release.outputs.id != ''
+      #   uses: author/action-rollback@stable
+      #   with:
+      #     release_id: ${{ steps.create-release.outputs.id }}
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
