@@ -85,13 +85,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Delete Testnet Release
-        if: startsWith(env.DOCKER_TAG, "testnet-")
+        if: startsWith(${{ env.DOCKER_TAG }}, 'testnet-')
         shell: bash
         run: |
           curl -H "Accept: application/json" -H "Authorization: token ${{ env.GH_TOKEN }}" --request DELETE --data https://api.github.com/repos/switchboard-xyz/sbv2-oracle-operators/releases
 
       - name: Create Testnet Release
-        if: startsWith(env.DOCKER_TAG, "testnet-")
+        if: startsWith(${{ env.DOCKER_TAG }}, 'testnet-')
         id: create-testnet-release
         uses: actions/create-release@v1
         env:
@@ -107,7 +107,7 @@ jobs:
             [DockerHub](https://hub.docker.com/r/switchboardlabs/node/tags)"
 
       - name: Upload Release Assets
-        if: startsWith(env.DOCKER_TAG, "testnet-")
+        if: startsWith(${{ env.DOCKER_TAG }}, 'testnet-')
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
