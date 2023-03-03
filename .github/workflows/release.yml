@@ -36,7 +36,7 @@ jobs:
           fi
 
       # TODO: Start new container and copy the sbv2-oracle files
-      - name: Copy Docker container build files
+      - name: Copy Docker Node container build files
         shell: bash
         run: |
           mkdir -p docker-sbv2-oracle
@@ -50,6 +50,21 @@ jobs:
         run: |
           (cd docker-sbv2-oracle/dist && zip -r "$OLDPWD/sbv2-oracle.zip" .)
           echo "sbv2_oracle_path=./sbv2-oracle.zip" >> $GITHUB_OUTPUT
+
+      - name: Copy Docker Crank container build files
+        shell: bash
+        run: |
+          mkdir -p docker-sbv2-crank
+          docker image pull switchboardlabs/crank-turn:${{ env.DOCKER_TAG }}
+          docker run -d --name sbv2-crank switchboardlabs/crank-turn:${{ env.DOCKER_TAG }}
+          docker cp sbv2-crank:/home/node/sbv2-crank/dist docker-sbv2-crank
+          docker stop sbv2-crank
+      - name: Create sbv2-crank zip
+        shell: bash
+        id: create-crank-zip
+        run: |
+          (cd docker-sbv2-crank/dist && zip -r "$OLDPWD/sbv2-crank.zip" .)
+          echo "sbv2_crank_path=./sbv2-crank.zip" >> $GITHUB_OUTPUT
 
       - name: GitHub Release
         id: create-release
@@ -74,6 +89,16 @@ jobs:
           upload_url: ${{ steps.create-release.outputs.upload_url }}
           asset_path: ${{ steps.create-zip.outputs.sbv2_oracle_path }}
           asset_name: sbv2-oracle.zip
+          asset_content_type: application/tgz
+
+      - name: Upload Crank Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ${{ steps.create-crank-zip.outputs.sbv2_crank_path }}
+          asset_name: sbv2-crank.zip
           asset_content_type: application/tgz
 
       - name: Rollback Release
